@@ -78,9 +78,10 @@ const TreasureHuntGame = () => {
           );
           setDistance(dist);
 
-          if (dist < 5) {
+          if (dist < 10) {//////
             setFound(true);
             setScore(prev => prev + 1);
+            saveScore(username===''?'undefined':username, score);
           }
         }
       },
