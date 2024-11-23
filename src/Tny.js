@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
+import { Send, MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
 import { FantasyMap } from './FantasyMap';
 import { calculateDistance, generateRandomPoint } from './utils';
 import { Card, CardContent } from './components/ui/card';
@@ -81,7 +81,6 @@ const TreasureHuntGame = () => {
           if (dist < 5) {//////score
             setFound(true);
             setScore(prev => prev + 1);
-
           }
         }
       },

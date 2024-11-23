@@ -29,17 +29,18 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 //database
 export const saveScore = async (username, score) => {
   try {
+    // Use upsert operation with username as the unique key
     const { data, error } = await supabase
       .from('users')
       .upsert(
         { 
           username, 
           score,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString() // Add timestamp for tracking
         },
         {
-          onConflict: 'username',
-          returning: 'minimal'
+          onConflict: 'username', // Specify the unique constraint
+          returning: 'minimal' // Reduce data transfer
         }
       );
 
@@ -51,6 +52,7 @@ export const saveScore = async (username, score) => {
     return data;
   } catch (err) {
     console.error('Error saving score:', err.message);
+    // Return null instead of throwing to prevent app crashes
     return null;
   }
 };
@@ -62,10 +64,15 @@ export const fetchScore = async (username) => {
       .select('score')
       .eq('username', username)
       .single();
-    if (error) throw error;
-    return data?.score || null;
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    return data?.score || 0; // Return 0 instead of null for new users
   } catch (err) {
     console.error('Error fetching user score:', err.message);
-    throw err;
+    return 0; // Return 0 instead of throwing
   }
 };
