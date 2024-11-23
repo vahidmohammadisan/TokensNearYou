@@ -31,8 +31,11 @@ const TreasureHuntGame = () => {
   
   /////////////score
   useEffect(() => {
-    setScore(score);
-    saveScore(username===''?'undefined':username, score);
+    const tg = window.Telegram?.WebApp;
+    if (tg && score > 0) {
+      saveScore(username, score, tg.initData)
+        .catch(error => console.error('Failed to save score:', error));
+    }
   }, [score]);
 
   useEffect(() => {
