@@ -38,8 +38,10 @@ const TreasureHuntGame = () => {
   useEffect(() => {
     const fetchAndSetUserScore = async () => {
       try {
-        const fetchedScore = await fetchScore(username===''?'undefined1':username);
+        if (username !== '') {
+        const fetchedScore = await fetchScore(username);
         setScore(fetchedScore || 0);
+        }
       } catch (error) {
 
       }
@@ -78,7 +80,7 @@ const TreasureHuntGame = () => {
           );
           setDistance(dist);
 
-          if (dist < 12) {//////score
+          if (dist < 7) {//////score
             setFound(true);
             setScore(prev => prev + 1);
           }
