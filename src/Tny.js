@@ -12,7 +12,6 @@ const TreasureHuntGame = () => {
   const [gameStarted, setGameStarted] = useState(false);
   const [found, setFound] = useState(false);
   const [error, setError] = useState(null);
-  const [treasuresFound, setTreasuresFound] = useState(0);
   const [username, setUsername] = useState('');
   const [score, setScore] = useState(0);
   
@@ -32,23 +31,22 @@ const TreasureHuntGame = () => {
   
   /////////////
   useEffect(() => {
-    //if (treasuresFound > score) {
-        setScore(score);
-        saveScore(username, score);
-    //}
+    setScore(score);
+    saveScore(username===''?'undefined':username, score);
   }, [score]);
 
   useEffect(() => {
     const fetchAndSetUserScore = async () => {
       try {
-          const fetchedScore = await fetchScore(username);
-          setScore(fetchedScore || 0);
-      } catch (error) {}
+        const fetchedScore = await fetchScore(username===''?'undefined1':username);
+        setScore(fetchedScore || 0);
+      } catch (error) {
+
+      }
     };
 
     fetchAndSetUserScore();
   }, [username]);
-
   //////////////
 
   const startLocationTracking = () => {
