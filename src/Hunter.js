@@ -28,7 +28,7 @@ const generateRandomPoint = (centerLat, centerLng, radiusInMeters) => {
 };
 
 // کامپوننت نقشه فانتزی
-const FantasyMap = ({ distance, maxDistance = 100 }) => {
+const FantasyMap = ({ distance, maxDistance = 20 }) => {
   const progress = 1 - Math.min(distance, maxDistance) / maxDistance;
   
   return (
@@ -161,7 +161,7 @@ const TreasureHuntGame = () => {
           const newTreasure = generateRandomPoint(
             newUserLocation.lat,
             newUserLocation.lng,
-            100
+            20
           );
           setTreasureLocation(newTreasure);
         }
@@ -252,7 +252,7 @@ const TreasureHuntGame = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <FantasyMap distance={distance || 100} />
+                <FantasyMap distance={distance || 20} />
                 
                 <div className="text-lg font-semibold text-amber-800 text-center">
                   <span className="inline-flex items-center gap-2">
