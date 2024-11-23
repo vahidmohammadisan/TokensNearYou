@@ -13,66 +13,26 @@ const TreasureHuntGame = () => {
   const [error, setError] = useState(null);
   const [treasuresFound, setTreasuresFound] = useState(0);
   const [username, setUsername] = useState('');
-  const [locationPermission, setLocationPermission] = useState(null);
   
-  // Calculate base distance based on days since launch
-  const calculateBaseDistance = () => {
-    const launchDate = new Date('2024-11-23'); // Set your launch date here
-    const today = new Date();
-    const diffTime = Math.abs(today - launchDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return 20 + (diffDays * 5); // 20m base + 5m per day
-  };
-
   // Initialize Telegram WebApp integration
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.enableClosingConfirmation();
+      
       if (tg.initDataUnsafe?.user?.username) {
         setUsername(tg.initDataUnsafe.user.username);
       }
+      
       tg.expand();
     }
   }, []);
 
-  // Check location permission on mount
-  useEffect(() => {
-    checkLocationPermission();
-  }, []);
-
-  const checkLocationPermission = async () => {
-    try {
-      const permission = await navigator.permissions.query({ name: 'geolocation' });
-      setLocationPermission(permission.state);
-      
-      if (permission.state === 'granted') {
-        setError(null);
-      } else if (permission.state === 'prompt') {
-        setError('Please enable location access to play the game.');
-      } else if (permission.state === 'denied') {
-        setError('Location access is denied. Please enable it in your browser settings.');
-      }
-
-      permission.addEventListener('change', handlePermissionChange);
-      return () => permission.removeEventListener('change', handlePermissionChange);
-    } catch (err) {
-      setError('Unable to check location permission.');
-    }
-  };
-
-  const handlePermissionChange = (e) => {
-    setLocationPermission(e.target.state);
-    if (e.target.state === 'granted') {
-      setError(null);
-      startLocationWatch();
-    }
-  };
-
-  const startLocationWatch = () => {
-    const watchId = navigator.geolocation.watchPosition(
+  const startLocationTracking = () => {
+    setError(null);
+    
+    return navigator.geolocation.watchPosition(
       (position) => {
-        setError(null);
         const newUserLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
@@ -80,11 +40,10 @@ const TreasureHuntGame = () => {
         setUserLocation(newUserLocation);
 
         if (!treasureLocation) {
-          const baseDistance = calculateBaseDistance();
           const newTreasure = generateRandomPoint(
             newUserLocation.lat,
             newUserLocation.lng,
-            baseDistance
+            10
           );
           setTreasureLocation(newTreasure);
         }
@@ -105,13 +64,7 @@ const TreasureHuntGame = () => {
         }
       },
       (error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          setError('Location access denied. Please enable location services to play.');
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          setError('Unable to determine your location. Please check your GPS signal.');
-        } else if (error.code === error.TIMEOUT) {
-          setError('Location request timed out. Please try again.');
-        }
+        setError('Location access error: ' + error.message);
       },
       {
         enableHighAccuracy: true,
@@ -119,23 +72,16 @@ const TreasureHuntGame = () => {
         timeout: 5000,
       }
     );
-
-    return watchId;
   };
 
   useEffect(() => {
     if (!gameStarted) return;
     
-    if (locationPermission === 'granted') {
-      const watchId = startLocationWatch();
-      return () => navigator.geolocation.clearWatch(watchId);
-    }
-  }, [gameStarted, treasureLocation, locationPermission]);
+    const watchId = startLocationTracking();
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [gameStarted, treasureLocation]);
 
-  const startGame = async () => {
-    if (locationPermission !== 'granted') {
-      await checkLocationPermission();
-    }
+  const startGame = () => {
     setGameStarted(true);
     setFound(false);
     setTreasureLocation(null);
@@ -148,42 +94,31 @@ const TreasureHuntGame = () => {
     setDistance(null);
   };
 
-  const retryLocation = async () => {
-    await checkLocationPermission();
-    if (locationPermission === 'granted') {
-      setError(null);
-      startGame();
-    }
+  const handleRetry = () => {
+    setError(null);
+    startLocationTracking();
   };
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-amber-50 p-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center space-y-4">
-              <div className="text-red-600 mb-4">
-                <MapPin className="w-12 h-12 mx-auto mb-2" />
-              </div>
-              <h2 className="text-xl font-bold text-red-700 mb-2">Location Access Required</h2>
-              <p className="text-gray-700 mb-4">{error}</p>
-              <button
-                onClick={retryLocation}
-                className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all duration-300"
-              >
-                <RefreshCw className="w-5 h-5" />
-                Retry Location Access
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="p-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4">
+          <strong className="font-bold">Error! </strong>
+          <span className="block sm:inline">{error}</span>
+        </div>
+        <button
+          onClick={handleRetry}
+          className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Retry
+        </button>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-amber-50">
-      {/* Rest of the component remains the same */}
       {/* Header */}
       <div className="flex justify-between items-center p-4">
         <div className="flex items-center gap-2">
@@ -252,7 +187,7 @@ const TreasureHuntGame = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <FantasyMap distance={distance || calculateBaseDistance()} />
+                <FantasyMap distance={distance || 10} />
                 
                 <div className="text-lg font-semibold text-amber-800 text-center">
                   <span className="inline-flex items-center gap-2">
