@@ -78,7 +78,7 @@ const TreasureHuntGame = () => {
           );
           setDistance(dist);
 
-          if (dist < 10) {//////score
+          if (dist < 2) {//////score
             setFound(true);
             setScore(prev => prev + 1);
 
@@ -121,7 +121,7 @@ const TreasureHuntGame = () => {
     startLocationTracking();
   };
 
-  if (error) {
+  if (error&&distance!==null) {
     return (
       <div className="p-4">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4">
