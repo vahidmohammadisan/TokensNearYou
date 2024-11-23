@@ -33,7 +33,7 @@ const TreasureHuntGame = () => {
   /////////////
   useEffect(() => {
     //if (treasuresFound > score) {
-        setScore(treasuresFound);
+        setScore(score);
         saveScore(username, treasuresFound);
     //}
   }, [treasuresFound]);
@@ -43,7 +43,6 @@ const TreasureHuntGame = () => {
       try {
           const fetchedScore = await fetchScore(username);
           setScore(fetchedScore || 0);
-          setTreasuresFound(fetchedScore || 0);
       } catch (error) {}
     };
 
