@@ -78,7 +78,7 @@ const TreasureHuntGame = () => {
           );
           setDistance(dist);
 
-          if (dist < 5) {//////score
+          if (dist < 12) {//////score
             setFound(true);
             setScore(prev => prev + 1);
           }
