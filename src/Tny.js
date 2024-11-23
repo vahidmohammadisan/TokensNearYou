@@ -34,17 +34,23 @@ const TreasureHuntGame = () => {
   useEffect(() => {
     if (treasuresFound > score) {
       setScore(treasuresFound);
+      if(username!=''){
       saveScore(username, treasuresFound);
+      }
     }
   }, [treasuresFound]);
 
   useEffect(() => {
     const fetchAndSetUserScore = async () => {
       try {
+        if(username!=''){
         const fetchedScore = await fetchScore(username);
         setScore(fetchedScore || 0);
+        }else{
+          setError('Can not retrive your username...');
+        }
       } catch (error) {
-        console.error('Error fetching user score:', error);
+        setError('Can not retrive your username...');
       }
     };
 
