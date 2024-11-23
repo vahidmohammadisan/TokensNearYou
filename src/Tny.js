@@ -64,7 +64,7 @@ const TreasureHuntGame = () => {
         }
       },
       (error) => {
-        setError('Location access error: ' + error.message);
+        setError('Location access error: ' + error.message + '\n\n The Loaction must be enable ...');
       },
       {
         enableHighAccuracy: true,
