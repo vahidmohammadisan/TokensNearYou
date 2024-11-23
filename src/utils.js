@@ -29,14 +29,31 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
 //database
 export const saveScore = async (username, score) => {
   try {
+    // Use upsert operation with username as the unique key
     const { data, error } = await supabase
-      .from('users') // نام جدول
-      .insert([{ username, score }]); // داده‌ها
-    if (error) throw error;
+      .from('users')
+      .upsert(
+        { 
+          username, 
+          score,
+          updated_at: new Date().toISOString() // Add timestamp for tracking
+        },
+        {
+          onConflict: 'username', // Specify the unique constraint
+          returning: 'minimal' // Reduce data transfer
+        }
+      );
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
     return data;
   } catch (err) {
     console.error('Error saving score:', err.message);
-    throw err;
+    // Return null instead of throwing to prevent app crashes
+    return null;
   }
 };
 

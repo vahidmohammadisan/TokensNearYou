@@ -3,7 +3,7 @@ import { MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
 import { FantasyMap } from './FantasyMap';
 import { calculateDistance, generateRandomPoint } from './utils';
 import { Card, CardContent } from './components/ui/card';
-import { saveScore, fetchScore } from './utils';////
+import { saveScore, fetchScore } from './utils';////score
 
 const TreasureHuntGame = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -29,7 +29,7 @@ const TreasureHuntGame = () => {
     }
   }, []);
   
-  /////////////
+  /////////////score
   useEffect(() => {
     setScore(score);
     saveScore(username===''?'undefined':username, score);
@@ -78,10 +78,10 @@ const TreasureHuntGame = () => {
           );
           setDistance(dist);
 
-          if (dist < 10) {//////
+          if (dist < 10) {//////score
             setFound(true);
             setScore(prev => prev + 1);
-            saveScore(username===''?'undefined':username, score);
+
           }
         }
       },
