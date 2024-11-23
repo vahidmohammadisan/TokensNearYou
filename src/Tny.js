@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Trophy, Compass, RefreshCw, Send } from 'lucide-react';
+import { MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
 import { FantasyMap } from './FantasyMap';
 import { calculateDistance, generateRandomPoint } from './utils';
 import { Card, CardContent } from './components/ui/card';
@@ -31,11 +31,8 @@ const TreasureHuntGame = () => {
   
   /////////////score
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg && score > 0) {
-      saveScore(username, score, tg.initData)
-        .catch(error => console.error('Failed to save score:', error));
-    }
+    setScore(score);
+    saveScore(username===''?'undefined':username, score);
   }, [score]);
 
   useEffect(() => {

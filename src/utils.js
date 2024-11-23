@@ -27,49 +27,14 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   };
 
 //database
-// Function to validate Telegram WebApp data using Web Crypto API
-const validateTelegramWebAppData = async (initData) => {
+export const saveScore = async (username, score) => {
   try {
-    // Check if initData exists and comes from Telegram
-    if (!window.Telegram?.WebApp?.initData) {
-      return false;
-    }
-
-    // Verify the data matches what Telegram sent
-    return initData === window.Telegram.WebApp.initData;
-  } catch (error) {
-    console.error('Validation error:', error);
-    return false;
-  }
-};
-
-export const saveScore = async (username, score, initData) => {
-  try {
-    // First, validate that this is a legitimate Telegram WebApp request
-    if (!initData || !(await validateTelegramWebAppData(initData))) {
-      throw new Error('Invalid or missing Telegram WebApp data');
-    }
-
-    // Get the Telegram WebApp instance
-    const tg = window.Telegram?.WebApp;
-    if (!tg?.initDataUnsafe?.user) {
-      throw new Error('No Telegram user data available');
-    }
-
-    // Verify that the username matches the Telegram user
-    const telegramUser = tg.initDataUnsafe.user;
-    if (telegramUser.username !== username) {
-      throw new Error('Username mismatch');
-    }
-
-    // If validation passes, proceed with the upsert
     const { data, error } = await supabase
       .from('users')
       .upsert(
-        {
-          username,
+        { 
+          username, 
           score,
-          telegram_user_id: telegramUser.id,
           updated_at: new Date().toISOString()
         },
         {
@@ -97,15 +62,10 @@ export const fetchScore = async (username) => {
       .select('score')
       .eq('username', username)
       .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
-    }
-
-    return data?.score || 0;
+    if (error) throw error;
+    return data?.score || null;
   } catch (err) {
     console.error('Error fetching user score:', err.message);
-    return 0;
+    throw err;
   }
 };
