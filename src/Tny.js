@@ -35,7 +35,7 @@ const TreasureHuntGame = () => {
     if (treasuresFound > score) {
       setScore(treasuresFound);
       if(username!=''){
-      saveScore(username, treasuresFound);
+        saveScore(username, treasuresFound);
       }
     }
   }, [treasuresFound]);
@@ -44,14 +44,10 @@ const TreasureHuntGame = () => {
     const fetchAndSetUserScore = async () => {
       try {
         if(username!=''){
-        const fetchedScore = await fetchScore(username);
-        setScore(fetchedScore || 0);
-        }else{
-          setError('Can not retrive your username...');
+          const fetchedScore = await fetchScore(username);
+          setScore(fetchedScore || 0);
         }
-      } catch (error) {
-        setError('Can not retrive your username...');
-      }
+      } catch (error) {}
     };
 
     fetchAndSetUserScore();
