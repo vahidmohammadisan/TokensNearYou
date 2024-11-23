@@ -3,6 +3,7 @@ import { MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
 import { FantasyMap } from './FantasyMap';
 import { calculateDistance, generateRandomPoint } from './utils';
 import { Card, CardContent } from './components/ui/card';
+import { saveScore, fetchScore } from './utils';////
 
 const TreasureHuntGame = () => {
   const [userLocation, setUserLocation] = useState(null);
@@ -13,6 +14,7 @@ const TreasureHuntGame = () => {
   const [error, setError] = useState(null);
   const [treasuresFound, setTreasuresFound] = useState(0);
   const [username, setUsername] = useState('');
+  const [score, setScore] = useState(0);
   
   // Initialize Telegram WebApp integration
   useEffect(() => {
@@ -27,6 +29,29 @@ const TreasureHuntGame = () => {
       tg.expand();
     }
   }, []);
+  
+  /////////////
+  useEffect(() => {
+    if (treasuresFound > score) {
+      setScore(treasuresFound);
+      saveScore(username, treasuresFound);
+    }
+  }, [treasuresFound]);
+
+  useEffect(() => {
+    const fetchAndSetUserScore = async () => {
+      try {
+        const fetchedScore = await fetchScore(username);
+        setScore(fetchedScore || 0);
+      } catch (error) {
+        console.error('Error fetching user score:', error);
+      }
+    };
+
+    fetchAndSetUserScore();
+  }, [username]);
+
+  //////////////
 
   const startLocationTracking = () => {
     setError(null);
@@ -131,7 +156,7 @@ const TreasureHuntGame = () => {
         </div>
         <div className="flex items-center gap-2">
           <div className="px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">
-            {treasuresFound} 🏆
+            {score} 🏆
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-400 to-amber-600 flex items-center justify-center">
             <span className="text-xs font-bold text-white">TNY</span>

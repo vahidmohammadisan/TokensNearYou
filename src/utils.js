@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
     const φ1 = (lat1 * Math.PI) / 180;
@@ -23,3 +25,32 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
       lng: centerLng + randomRadius * Math.sin(randomAngle)
     };
   };
+
+//database
+export const saveScore = async (username, score) => {
+  try {
+    const { data, error } = await supabase
+      .from('users') // نام جدول
+      .insert([{ username, score }]); // داده‌ها
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error('Error saving score:', err.message);
+    throw err;
+  }
+};
+
+export const fetchScore = async (username) => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('score')
+      .eq('username', username)
+      .single();
+    if (error) throw error;
+    return data?.score || null;
+  } catch (err) {
+    console.error('Error fetching user score:', err.message);
+    throw err;
+  }
+};
