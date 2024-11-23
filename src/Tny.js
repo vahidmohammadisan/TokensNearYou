@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Trophy, Compass, RefreshCw } from 'lucide-react';
+import { MapPin, Trophy, Compass, RefreshCw, Send } from 'lucide-react';
 import { FantasyMap } from './FantasyMap';
 import { calculateDistance, generateRandomPoint } from './utils';
 import { Card, CardContent } from './components/ui/card';
@@ -145,7 +145,7 @@ const TreasureHuntGame = () => {
       <div className="flex justify-between items-center p-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-purple-600" />
+            <Send className="w-5 h-5 text-purple-600" />
           </div>
           <span className="text-sm font-medium text-purple-600">
             {username ? `@${username}` : 'Treasure Hunter'}
