@@ -1,7 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
-import Hunter from './Hunter'
-//import Hunter from './Hunter'
+import Hunter from './Tny'
 
 function App() {
   return (
