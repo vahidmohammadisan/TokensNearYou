@@ -1,7 +1,7 @@
 import React from 'react';
 import { Compass } from 'lucide-react';
 
-export const FantasyMap = ({ distance, maxDistance = 100 }) => {
+export const FantasyMap = ({ distance, maxDistance = 20 }) => {
   const progress = 1 - Math.min(distance, maxDistance) / maxDistance;
   
   return (

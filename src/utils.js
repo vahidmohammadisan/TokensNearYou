@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import crypto from 'crypto';
 
 export const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -28,33 +27,16 @@ export const calculateDistance = (lat1, lon1, lat2, lon2) => {
   };
 
 //database
-// Function to validate Telegram WebApp data
-const validateTelegramWebAppData = (initData) => {
+// Function to validate Telegram WebApp data using Web Crypto API
+const validateTelegramWebAppData = async (initData) => {
   try {
-    // Get the hash and remove it from the data
-    const searchParams = new URLSearchParams(initData);
-    const hash = searchParams.get('hash');
-    searchParams.delete('hash');
-    
-    // Sort the params alphabetically
-    const params = Array.from(searchParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-    
-    // Create a secret key from your bot token
-    const secret = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(process.env.TELEGRAM_BOT_TOKEN)
-      .digest();
-    
-    // Calculate the hash
-    const calculatedHash = crypto
-      .createHmac('sha256', secret)
-      .update(params)
-      .digest('hex');
-    
-    return calculatedHash === hash;
+    // Check if initData exists and comes from Telegram
+    if (!window.Telegram?.WebApp?.initData) {
+      return false;
+    }
+
+    // Verify the data matches what Telegram sent
+    return initData === window.Telegram.WebApp.initData;
   } catch (error) {
     console.error('Validation error:', error);
     return false;
@@ -64,16 +46,19 @@ const validateTelegramWebAppData = (initData) => {
 export const saveScore = async (username, score, initData) => {
   try {
     // First, validate that this is a legitimate Telegram WebApp request
-    if (!initData || !validateTelegramWebAppData(initData)) {
+    if (!initData || !(await validateTelegramWebAppData(initData))) {
       throw new Error('Invalid or missing Telegram WebApp data');
     }
 
-    // Parse the initData to get the Telegram user info
-    const parsedData = Object.fromEntries(new URLSearchParams(initData));
-    const user = JSON.parse(parsedData.user);
+    // Get the Telegram WebApp instance
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.initDataUnsafe?.user) {
+      throw new Error('No Telegram user data available');
+    }
 
     // Verify that the username matches the Telegram user
-    if (user.username !== username) {
+    const telegramUser = tg.initDataUnsafe.user;
+    if (telegramUser.username !== username) {
       throw new Error('Username mismatch');
     }
 
@@ -84,7 +69,7 @@ export const saveScore = async (username, score, initData) => {
         {
           username,
           score,
-          telegram_user_id: user.id, // Store Telegram user ID for extra verification
+          telegram_user_id: telegramUser.id,
           updated_at: new Date().toISOString()
         },
         {
