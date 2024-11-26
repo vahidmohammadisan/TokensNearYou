@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Trophy } from 'lucide-react';
 import { supabase } from './supabaseClient';
@@ -123,15 +123,30 @@ const GameScreen = ({ username, score }) => {
   const [treasureLocation, setTreasureLocation] = useState(null);
   const [distance, setDistance] = useState(null);
   const [locationError, setLocationError] = useState(null);
+  const [watchId, setWatchId] = useState(null);
+
+  // Function to calculate distance
+  const calculateCurrentDistance = useCallback((currentLocation, treasureLoc) => {
+    if (currentLocation && treasureLoc) {
+      const dist = calculateDistance(
+        currentLocation.lat, 
+        currentLocation.lng, 
+        treasureLoc.lat, 
+        treasureLoc.lng
+      );
+      setDistance(dist);
+    }
+  }, []);
 
   useEffect(() => {
-    // Request location when the game screen loads
-    const requestLocation = () => {
+    // Initial location setup and treasure generation
+    const setupInitialLocation = () => {
       if (!navigator.geolocation) {
         setLocationError('Geolocation is not supported by your browser');
         return;
       }
 
+      // First, get initial position
       navigator.geolocation.getCurrentPosition(
         (position) => {
           // Set user's current location
@@ -148,6 +163,39 @@ const GameScreen = ({ username, score }) => {
             300 // 300 meters radius
           );
           setTreasureLocation(generatedTreasureLocation);
+
+          // Set up continuous location watching
+          const id = navigator.geolocation.watchPosition(
+            (newPosition) => {
+              const newLocation = {
+                lat: newPosition.coords.latitude,
+                lng: newPosition.coords.longitude
+              };
+              setUserLocation(prevLocation => {
+                // Only update and recalculate if location has significantly changed
+                if (!prevLocation || 
+                    calculateDistance(
+                      prevLocation.lat, prevLocation.lng, 
+                      newLocation.lat, newLocation.lng
+                    ) > 5 // Recalculate if moved more than 5 meters
+                ) {
+                  calculateCurrentDistance(newLocation, generatedTreasureLocation);
+                  return newLocation;
+                }
+                return prevLocation;
+              });
+            },
+            (err) => {
+              setLocationError(err.message);
+            },
+            {
+              enableHighAccuracy: true, // More accurate location
+              maximumAge: 0, // Always get fresh location
+              timeout: 5000 // 5 seconds timeout
+            }
+          );
+
+          setWatchId(id);
         },
         (err) => {
           setLocationError(err.message);
@@ -155,21 +203,20 @@ const GameScreen = ({ username, score }) => {
       );
     };
 
-    requestLocation();
-  }, []);
+    setupInitialLocation();
 
-  // Calculate distance when both locations are available
+    // Cleanup function to stop watching location when component unmounts
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Recalculate distance whenever user location or treasure location changes
   useEffect(() => {
-    if (userLocation && treasureLocation) {
-      const dist = calculateDistance(
-        userLocation.lat, 
-        userLocation.lng, 
-        treasureLocation.lat, 
-        treasureLocation.lng
-      );
-      setDistance(dist);
-    }
-  }, [userLocation, treasureLocation]);
+    calculateCurrentDistance(userLocation, treasureLocation);
+  }, [userLocation, treasureLocation, calculateCurrentDistance]);
 
   // Render loading or error states
   if (locationError) {
@@ -222,7 +269,6 @@ const GameScreen = ({ username, score }) => {
     </motion.div>
   );
 };
-
 // Main App Component
 const TreasureHuntApp = () => {
   const [stage, setStage] = useState('splash');
