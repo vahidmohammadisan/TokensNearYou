@@ -9,6 +9,7 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { saveScore, fetchScore } from './utils';////score
+import 'leaflet/dist/leaflet.css';
 
 // Splash Screen Component
 const SplashScreen = ({ onComplete }) => {
@@ -369,6 +370,12 @@ const MapTracker = ({ userLocation, onMapMove }) => {
   return null;
 };
 
+const ResizeMap = () => {
+  const map = useMap();
+  map._onResize();
+  return null;
+};
+
 // Game Screen Component
 const GameScreen2 = ({ username, score, onExit }) => {
   const [userLocation, setUserLocation] = useState(null);
@@ -522,18 +529,18 @@ const GameScreen2 = ({ username, score, onExit }) => {
 
       {/* Map Container */}
       <MapContainer 
-        center={mapCenter || userLocation} 
-        zoom={15} 
+       center={mapCenter || userLocation} zoom={13}
         scrollWheelZoom={true}  // Enable scroll wheel zooming
         zoomControl={true}      // Show zoom controls
         className="h-full w-full"
       >
+
+        <ResizeMap />
         {/* Fantasy-themed map tiles */}
         <TileLayer
-          url="https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png?api_key=e532c339-e9eb-4cef-8ae3-1dddc372b4b7"
-          attribution='&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a>'
-        />
-
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      />
         {/* Map Tracker for interactions */}
         <MapTracker 
           userLocation={userLocation}
