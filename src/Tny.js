@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Trophy } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { generateRandomPoint, calculateDistance } from './utils';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { saveScore, fetchScore } from './utils';////score
 
 // Splash Screen Component
@@ -40,7 +42,7 @@ const SplashScreen = ({ onComplete }) => {
 };
 
 // Main Screen Component
-const MainScreen = ({ username, score, onComplete }) => {
+const MainScreen = ({ username, score, onPlay1, onPlay2 }) => {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex flex-col items-center justify-center p-4">
       {/* Splash Image */}
@@ -72,7 +74,14 @@ const MainScreen = ({ username, score, onComplete }) => {
       {/* Main Content */}
       <div className="relative z-10 text-center mt-auto">
         <button
-          onClick={onComplete}
+          onClick={onPlay1}
+          className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+        >
+          Play
+        </button>
+
+        <button
+          onClick={onPlay2}
           className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
         >
           Play
@@ -84,7 +93,41 @@ const MainScreen = ({ username, score, onComplete }) => {
 
 
 // Location Permission Screen
-const LocationPermissionScreen = ({ onPermissionAcknowledged }) => {
+const LocationPermissionScreen1 = ({ onPermissionAcknowledged }) => {
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex flex-col items-center justify-center p-4"
+    >
+      {/* Background image */}
+      <img 
+        src="/map-screen.png" 
+        alt="Location Permission" 
+        className="absolute inset-0 w-full h-full object-cover opacity-30"
+      />
+
+      <div className="relative z-10 text-center max-w-md px-4">
+        <h2 className="text-2xl font-bold mb-4 text-amber-800">
+          Location Required
+        </h2>
+        <p className="text-lg mb-6 text-purple-800">
+          This treasure hunt game requires your location to generate a nearby treasure spot. 
+          We'll use your current location to create a unique hunting experience.
+        </p>
+        <button 
+          onClick={onPermissionAcknowledged}
+          className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+        >
+          I Understand, Let's Play
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+// Location Permission Screen
+const LocationPermissionScreen2 = ({ onPermissionAcknowledged }) => {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -118,7 +161,7 @@ const LocationPermissionScreen = ({ onPermissionAcknowledged }) => {
 };
 
 // Game Screen (with Location Retrieval)
-const GameScreen = ({ username, score }) => {
+const GameScreen1 = ({ username, score }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [treasureLocation, setTreasureLocation] = useState(null);
   const [distance, setDistance] = useState(null);
@@ -269,6 +312,248 @@ const GameScreen = ({ username, score }) => {
     </motion.div>
   );
 };
+
+
+const UserMarkerIcon = L.icon({
+  iconUrl: '/user-marker.png', // Fantasy-style user marker
+  iconSize: [50, 50],
+  iconAnchor: [25, 50],
+  popupAnchor: [0, -50]
+});
+
+const TreasureMarkerIcon = L.icon({
+  iconUrl: '/treasure-marker.png', // Fantasy-style treasure marker
+  iconSize: [60, 60],
+  iconAnchor: [30, 60],
+  popupAnchor: [0, -60]
+});
+
+// Map Centering Component
+const MapCenter = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (center) {
+      map.setView(center, 15);
+    }
+  }, [center, map]);
+  return null;
+};
+
+// Game Screen Component
+const GameScreen2 = ({ username, score, onExit }) => {
+  const [userLocation, setUserLocation] = useState(null);
+  const [treasureLocation, setTreasureLocation] = useState(null);
+  const [distance, setDistance] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [isVictory, setIsVictory] = useState(false);
+  const [watchId, setWatchId] = useState(null);
+
+  // Function to calculate distance
+  const calculateCurrentDistance = useCallback((currentLocation, treasureLoc) => {
+    if (currentLocation && treasureLoc) {
+      const dist = calculateDistance(
+        currentLocation.lat, 
+        currentLocation.lng, 
+        treasureLoc.lat, 
+        treasureLoc.lng
+      );
+      setDistance(dist);
+
+      // Check for victory condition
+      if (dist <= 10) {
+        setIsVictory(true);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial location setup and treasure generation
+    const setupInitialLocation = () => {
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by your browser');
+        return;
+      }
+
+      // First, get initial position
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // Set user's current location
+          const currentLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(currentLocation);
+
+          // Generate treasure location near the user
+          const generatedTreasureLocation = generateRandomPoint(
+            currentLocation.lat, 
+            currentLocation.lng, 
+            300 // 300 meters radius
+          );
+          setTreasureLocation(generatedTreasureLocation);
+
+          // Set up continuous location watching
+          const id = navigator.geolocation.watchPosition(
+            (newPosition) => {
+              const newLocation = {
+                lat: newPosition.coords.latitude,
+                lng: newPosition.coords.longitude
+              };
+              setUserLocation(prevLocation => {
+                // Only update and recalculate if location has significantly changed
+                if (!prevLocation || 
+                    calculateDistance(
+                      prevLocation.lat, prevLocation.lng, 
+                      newLocation.lat, newLocation.lng
+                    ) > 5 // Recalculate if moved more than 5 meters
+                ) {
+                  calculateCurrentDistance(newLocation, generatedTreasureLocation);
+                  return newLocation;
+                }
+                return prevLocation;
+              });
+            },
+            (err) => {
+              setLocationError(err.message);
+            },
+            {
+              enableHighAccuracy: true,
+              maximumAge: 0,
+              timeout: 5000
+            }
+          );
+
+          setWatchId(id);
+        },
+        (err) => {
+          setLocationError(err.message);
+        }
+      );
+    };
+
+    setupInitialLocation();
+
+    // Cleanup function to stop watching location when component unmounts
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [calculateCurrentDistance]);
+
+  // Render loading or error states
+  if (locationError) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex items-center justify-center">
+        <p className="text-red-600 text-xl">{locationError}</p>
+      </div>
+    );
+  }
+
+  if (!userLocation || !treasureLocation) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex items-center justify-center">
+        <p className="text-xl text-purple-800">Locating treasure...</p>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0"
+    >
+
+        {/* Top Bar */}
+        <div className="flex justify-between p-4">
+        {/* Username Section */}
+        <div className="flex items-center gap-2">
+          <Send className="w-6 h-6 text-purple-600" />
+          <span className="text-xl font-bold text-purple-800">
+            {username}
+          </span>
+        </div>
+
+        {/* Score Section */}
+        <div className="flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-amber-600" />
+          <span className="text-xl font-bold text-amber-800">
+            {score}
+          </span>
+        </div>
+      </div>
+
+      {/* Victory Overlay */}
+      {isVictory && (
+        <div className="absolute z-50 inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
+          <h2 className="text-3xl font-bold text-yellow-400 mb-4">
+            🎉 You Found the Treasure! 🎉
+          </h2>
+          <button 
+            onClick={onExit}
+            className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+          >
+            Exit Game
+          </button>
+        </div>
+      )}
+
+      {/* Map Container */}
+      <MapContainer 
+        center={userLocation} 
+        zoom={15} 
+        scrollWheelZoom={false} 
+        className="h-full w-full"
+      >
+        {/* Fantasy-themed map tiles */}
+        <TileLayer
+          url="https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a>'
+        />
+
+        {/* Map Centering */}
+        <MapCenter center={userLocation} />
+
+        {/* User Marker */}
+        {userLocation && (
+          <Marker 
+            position={userLocation} 
+            icon={UserMarkerIcon}
+          >
+            <Popup>Your Current Location</Popup>
+          </Marker>
+        )}
+
+        {/* Treasure Marker */}
+        {treasureLocation && (
+          <Marker 
+            position={treasureLocation} 
+            icon={TreasureMarkerIcon}
+          >
+            <Popup>Treasure Awaits!</Popup>
+          </Marker>
+        )}
+      </MapContainer>
+
+      {/* Distance Indicator */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/70 rounded-lg px-4 py-2">
+        <p className="text-xl font-bold text-purple-800">
+          {distance ? `${Math.round(distance)}m to Treasure` : 'Locating...'}
+        </p>
+      </div>
+
+      {/* Exit Button */}
+      <button 
+        onClick={onExit}
+        className="absolute top-4 right-4 z-10 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+      >
+        Exit
+      </button>
+    </motion.div>
+  );
+};
+
 // Main App Component
 const TreasureHuntApp = () => {
   const [stage, setStage] = useState('splash');
@@ -292,12 +577,24 @@ const TreasureHuntApp = () => {
     setStage('main');
   };
 
-  const handleOnGoToPlay = () => {
-    setStage('permission');
+  const handleOnGoToPlay1 = () => {
+    setStage('permission1');
   };
 
-  const handlePermissionAcknowledged = () => {
-    setStage('game');
+  const handleOnGoToPlay2 = () => {
+    setStage('permission2');
+  };
+
+  const handlePermissionAcknowledged1 = () => {
+    setStage('game1');
+  };
+
+  const handlePermissionAcknowledged2 = () => {
+    setStage('game2');
+  };
+
+  const handleExitGame = () => {
+    setStage('main');
   };
 
   return (
@@ -307,16 +604,27 @@ const TreasureHuntApp = () => {
         <MainScreen
           username={username}
           score={score}
-          onComplete={handleOnGoToPlay}
+          onPlay1={handleOnGoToPlay1}
+          onPlay2={handleOnGoToPlay2}
         />
       )}
-      {stage === 'permission' && (
-        <LocationPermissionScreen onPermissionAcknowledged={handlePermissionAcknowledged} />
+      {stage === 'permission1' && (
+        <LocationPermissionScreen1 onPermissionAcknowledged={handlePermissionAcknowledged1} />
       )}
-      {stage === 'game' && (
-        <GameScreen
+      {stage === 'permission2' && (
+        <LocationPermissionScreen2 onPermissionAcknowledged={handlePermissionAcknowledged2} />
+      )}
+      {stage === 'game1' && (
+        <GameScreen1
           username={username}
           score={score}
+        />
+      )}
+      {stage === 'game2' && (
+        <GameScreen2
+          username={username}
+          score={score}
+          onExit={handleExitGame}
         />
       )}
     </AnimatePresence>
