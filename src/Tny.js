@@ -84,130 +84,116 @@ const MainScreen = ({ username, score, onComplete }) => {
 
 
 // Location Permission Screen
-const LocationPermissionScreen = ({ onPermissionGranted }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const requestLocation = () => {
-    setLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        // Generate initial treasure location
-        const initialLocation = generateRandomPoint(
-          position.coords.latitude, 
-          position.coords.longitude, 
-          300
-        );
-        onPermissionGranted({
-          userLocation: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          },
-          treasureLocation: initialLocation
-        });
-      },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
-    );
-  };
-
+const LocationPermissionScreen = ({ onPermissionAcknowledged }) => {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex flex-col items-center justify-center p-4"
     >
-      {/* Background video with alpha layer */}
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        className="absolute inset-0 w-full h-full object-cover opacity-30"
-      >
-        <source src="/path-to-background-video.mp4" type="video/mp4" />
-      </video>
-
+      {/* Background image */}
       <img 
         src="/map-screen.png" 
-        alt="Splash Screen" 
-        className="absolute inset-0 w-full h-full object-cover"
+        alt="Location Permission" 
+        className="absolute inset-0 w-full h-full object-cover opacity-30"
       />
 
-      <div className="relative z-10 text-center">
+      <div className="relative z-10 text-center max-w-md px-4">
         <h2 className="text-2xl font-bold mb-4 text-amber-800">
-          We need your current location
+          Location Required
         </h2>
-        {error && (
-          <p className="text-red-600 mb-4">{error}</p>
-        )}
+        <p className="text-lg mb-6 text-purple-800">
+          This treasure hunt game requires your location to generate a nearby treasure spot. 
+          We'll use your current location to create a unique hunting experience.
+        </p>
         <button 
-          onClick={requestLocation}
-          disabled={loading}
+          onClick={onPermissionAcknowledged}
           className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
         >
-          {loading ? 'getting the location...' : 'Agree'}
+          I Understand, Let's Play
         </button>
       </div>
     </motion.div>
   );
 };
 
-// Game Screen
-const GameScreen = ({
-  username,
-  score,
-  userLocation,
-  treasureLocation,
-  onLocationChange,
-}) => {
+// Game Screen (with Location Retrieval)
+const GameScreen = ({ username, score }) => {
+  const [userLocation, setUserLocation] = useState(null);
+  const [treasureLocation, setTreasureLocation] = useState(null);
   const [distance, setDistance] = useState(null);
-  const [objectPosition, setObjectPosition] = useState(0);
+  const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
-    const calculateDistanceAndPosition = () => {
-      if (userLocation && treasureLocation) {
-        const dist = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          treasureLocation.lat,
-          treasureLocation.lng
-        );
-
-        setDistance(dist);
-
-        // Calculate object position based on distance (closer = higher)
-        const maxDistance = 100; // Adjust as needed
-        const position = 1 - Math.min(dist, maxDistance) / maxDistance;
-        setObjectPosition(position * 100); // Percentage
+    // Request location when the game screen loads
+    const requestLocation = () => {
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by your browser');
+        return;
       }
-    };
 
-    calculateDistanceAndPosition();
-  }, [userLocation, treasureLocation]); // Recalculate when userLocation changes
-
-  useEffect(() => {
-    // Example to fetch new location periodically or via an event
-    const locationUpdateInterval = setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const newLocation = {
+          // Set user's current location
+          const currentLocation = {
             lat: position.coords.latitude,
-            lng: position.coords.longitude,
+            lng: position.coords.longitude
           };
-          onLocationChange(newLocation); // Notify parent of location update
-        },
-        (error) => console.error('Location update failed:', error),
-        { enableHighAccuracy: true }
-      );
-    }, 5000); // Update every 5 seconds
+          setUserLocation(currentLocation);
 
-    return () => clearInterval(locationUpdateInterval); // Cleanup on unmount
-  }, [onLocationChange]);
+          // Generate treasure location near the user
+          const generatedTreasureLocation = generateRandomPoint(
+            currentLocation.lat, 
+            currentLocation.lng, 
+            300 // 300 meters radius
+          );
+          setTreasureLocation(generatedTreasureLocation);
+        },
+        (err) => {
+          setLocationError(err.message);
+        }
+      );
+    };
+
+    requestLocation();
+  }, []);
+
+  // Calculate distance when both locations are available
+  useEffect(() => {
+    if (userLocation && treasureLocation) {
+      const dist = calculateDistance(
+        userLocation.lat, 
+        userLocation.lng, 
+        treasureLocation.lat, 
+        treasureLocation.lng
+      );
+      setDistance(dist);
+    }
+  }, [userLocation, treasureLocation]);
+
+  // Render loading or error states
+  if (locationError) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex items-center justify-center">
+        <p className="text-red-600 text-xl">{locationError}</p>
+      </div>
+    );
+  }
+
+  if (!userLocation || !treasureLocation) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex items-center justify-center">
+        <p className="text-xl text-purple-800">Locating treasure...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50"
+    >
       {/* Top Bar */}
       <div className="flex justify-between p-4">
         {/* Username Section */}
@@ -230,21 +216,18 @@ const GameScreen = ({
       {/* Center Text */}
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
         <p className="text-xl font-bold text-amber-800">
-          {distance !== null ? `You are ${Math.round(distance)}m away` : 'Locating...'}
+          Treasure is {distance ? `${Math.round(distance)}m away` : 'Locating...'}
         </p>
       </div>
-    </div>
+    </motion.div>
   );
 };
-
 
 // Main App Component
 const TreasureHuntApp = () => {
   const [stage, setStage] = useState('splash');
   const [username, setUsername] = useState('user');
   const [score, setScore] = useState(100);
-  const [gameData, setGameData] = useState(null);
-  const [userLocation, setUserLocation] = useState(null); // Track user location
 
   useEffect(() => {
     // Telegram WebApp integration
@@ -257,25 +240,18 @@ const TreasureHuntApp = () => {
       }
 
       tg.expand();
-    }
-  }, []);
+  }}, []);
 
   const handleSplashComplete = () => {
     setStage('main');
   };
 
-  const handleOnGoToPaly = () => {
+  const handleOnGoToPlay = () => {
     setStage('permission');
   };
 
-  const handlePermissionGranted = (data) => {
-    setGameData(data);
-    setUserLocation(data.userLocation); // Initialize user location
+  const handlePermissionAcknowledged = () => {
     setStage('game');
-  };
-
-  const updateUserLocation = (location) => {
-    setUserLocation(location); // Update user location dynamically
   };
 
   return (
@@ -285,24 +261,20 @@ const TreasureHuntApp = () => {
         <MainScreen
           username={username}
           score={score}
-          onComplete={handleOnGoToPaly}
+          onComplete={handleOnGoToPlay}
         />
       )}
       {stage === 'permission' && (
-        <LocationPermissionScreen onPermissionGranted={handlePermissionGranted} />
+        <LocationPermissionScreen onPermissionAcknowledged={handlePermissionAcknowledged} />
       )}
-      {stage === 'game' && gameData && userLocation && (
+      {stage === 'game' && (
         <GameScreen
           username={username}
           score={score}
-          userLocation={userLocation}
-          treasureLocation={gameData.treasureLocation}
-          onLocationChange={updateUserLocation} // Handle dynamic updates
         />
       )}
     </AnimatePresence>
   );
 };
-
 
 export default TreasureHuntApp;
