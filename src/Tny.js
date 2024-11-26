@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Trophy } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { generateRandomPoint, calculateDistance } from './utils';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents  } from 'react-leaflet';
 import L from 'leaflet';
+// Leaflet Default Icon Fix
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { saveScore, fetchScore } from './utils';////score
 
 // Splash Screen Component
@@ -314,6 +317,16 @@ const GameScreen1 = ({ username, score }) => {
 };
 
 
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Custom Markers
 const UserMarkerIcon = L.icon({
   iconUrl: '/user-marker.png', // Fantasy-style user marker
   iconSize: [50, 50],
@@ -328,14 +341,31 @@ const TreasureMarkerIcon = L.icon({
   popupAnchor: [0, -60]
 });
 
-// Map Centering Component
-const MapCenter = ({ center }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView(center, 15);
+// Map Interaction Component
+const MapTracker = ({ userLocation, onMapMove }) => {
+  const map = useMapEvents({
+    move: () => {
+      // Track map center when user manually moves the map
+      const center = map.getCenter();
+      onMapMove({
+        lat: center.lat,
+        lng: center.lng
+      });
+    },
+    zoomend: () => {
+      // Optional: Handle zoom changes if needed
+      const zoom = map.getZoom();
+      console.log('Current Zoom:', zoom);
     }
-  }, [center, map]);
+  });
+
+  // Automatically center map on user location
+  useEffect(() => {
+    if (userLocation) {
+      map.setView(userLocation, 15);
+    }
+  }, [userLocation, map]);
+
   return null;
 };
 
@@ -343,6 +373,7 @@ const MapCenter = ({ center }) => {
 const GameScreen2 = ({ username, score, onExit }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [treasureLocation, setTreasureLocation] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);
   const [distance, setDistance] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [isVictory, setIsVictory] = useState(false);
@@ -383,6 +414,7 @@ const GameScreen2 = ({ username, score, onExit }) => {
             lng: position.coords.longitude
           };
           setUserLocation(currentLocation);
+          setMapCenter(currentLocation);
 
           // Generate treasure location near the user
           const generatedTreasureLocation = generateRandomPoint(
@@ -408,6 +440,10 @@ const GameScreen2 = ({ username, score, onExit }) => {
                     ) > 5 // Recalculate if moved more than 5 meters
                 ) {
                   calculateCurrentDistance(newLocation, generatedTreasureLocation);
+                  
+                  // Automatically update map center to user location
+                  setMapCenter(newLocation);
+                  
                   return newLocation;
                 }
                 return prevLocation;
@@ -441,6 +477,11 @@ const GameScreen2 = ({ username, score, onExit }) => {
     };
   }, [calculateCurrentDistance]);
 
+  // Handle manual map center changes
+  const handleMapMove = useCallback((newCenter) => {
+    setMapCenter(newCenter);
+  }, []);
+
   // Render loading or error states
   if (locationError) {
     return (
@@ -464,26 +505,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
       animate={{ opacity: 1 }}
       className="fixed inset-0"
     >
-
-        {/* Top Bar */}
-        <div className="flex justify-between p-4">
-        {/* Username Section */}
-        <div className="flex items-center gap-2">
-          <Send className="w-6 h-6 text-purple-600" />
-          <span className="text-xl font-bold text-purple-800">
-            {username}
-          </span>
-        </div>
-
-        {/* Score Section */}
-        <div className="flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-amber-600" />
-          <span className="text-xl font-bold text-amber-800">
-            {score}
-          </span>
-        </div>
-      </div>
-
       {/* Victory Overlay */}
       {isVictory && (
         <div className="absolute z-50 inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
@@ -501,19 +522,23 @@ const GameScreen2 = ({ username, score, onExit }) => {
 
       {/* Map Container */}
       <MapContainer 
-        center={userLocation} 
+        center={mapCenter || userLocation} 
         zoom={15} 
-        scrollWheelZoom={false} 
+        scrollWheelZoom={true}  // Enable scroll wheel zooming
+        zoomControl={true}      // Show zoom controls
         className="h-full w-full"
       >
         {/* Fantasy-themed map tiles */}
         <TileLayer
-          url="https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png"
+          url="https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png?api_key=e532c339-e9eb-4cef-8ae3-1dddc372b4b7"
           attribution='&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a>'
         />
 
-        {/* Map Centering */}
-        <MapCenter center={userLocation} />
+        {/* Map Tracker for interactions */}
+        <MapTracker 
+          userLocation={userLocation}
+          onMapMove={handleMapMove}
+        />
 
         {/* User Marker */}
         {userLocation && (
