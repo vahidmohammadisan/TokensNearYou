@@ -386,7 +386,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
   const [isVictory, setIsVictory] = useState(false);
   const [watchId, setWatchId] = useState(null);
 
-  // Function to calculate distance
   const calculateCurrentDistance = useCallback((currentLocation, treasureLoc) => {
     if (currentLocation && treasureLoc) {
       const dist = calculateDistance(
@@ -397,7 +396,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
       );
       setDistance(dist);
 
-      // Check for victory condition
       if (dist <= 10) {
         setIsVictory(true);
       }
@@ -405,17 +403,14 @@ const GameScreen2 = ({ username, score, onExit }) => {
   }, []);
 
   useEffect(() => {
-    // Initial location setup and treasure generation
     const setupInitialLocation = () => {
       if (!navigator.geolocation) {
         setLocationError('Geolocation is not supported by your browser');
         return;
       }
 
-      // First, get initial position
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          // Set user's current location
           const currentLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
@@ -423,38 +418,23 @@ const GameScreen2 = ({ username, score, onExit }) => {
           setUserLocation(currentLocation);
           setMapCenter(currentLocation);
 
-          // Generate treasure location near the user
           const generatedTreasureLocation = generateRandomPoint(
             currentLocation.lat, 
             currentLocation.lng, 
-            300 // 300 meters radius
+            50
           );
           setTreasureLocation(generatedTreasureLocation);
 
-          // Set up continuous location watching
           const id = navigator.geolocation.watchPosition(
             (newPosition) => {
               const newLocation = {
                 lat: newPosition.coords.latitude,
                 lng: newPosition.coords.longitude
               };
-              setUserLocation(prevLocation => {
-                // Only update and recalculate if location has significantly changed
-                if (!prevLocation || 
-                    calculateDistance(
-                      prevLocation.lat, prevLocation.lng, 
-                      newLocation.lat, newLocation.lng
-                    ) > 5 // Recalculate if moved more than 5 meters
-                ) {
-                  calculateCurrentDistance(newLocation, generatedTreasureLocation);
-                  
-                  // Automatically update map center to user location
-                  setMapCenter(newLocation);
-                  
-                  return newLocation;
-                }
-                return prevLocation;
-              });
+              setUserLocation(newLocation); // Update user location
+              setMapCenter(newLocation); // Automatically recenter map
+
+              calculateCurrentDistance(newLocation, generatedTreasureLocation);
             },
             (err) => {
               setLocationError(err.message);
@@ -465,7 +445,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
               timeout: 5000
             }
           );
-
           setWatchId(id);
         },
         (err) => {
@@ -476,7 +455,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
 
     setupInitialLocation();
 
-    // Cleanup function to stop watching location when component unmounts
     return () => {
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId);
@@ -484,12 +462,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
     };
   }, [calculateCurrentDistance]);
 
-  // Handle manual map center changes
-  const handleMapMove = useCallback((newCenter) => {
-    setMapCenter(newCenter);
-  }, []);
-
-  // Render loading or error states
   if (locationError) {
     return (
       <div className="fixed inset-0 bg-gradient-to-br from-purple-50 to-amber-50 flex items-center justify-center">
@@ -512,7 +484,6 @@ const GameScreen2 = ({ username, score, onExit }) => {
       animate={{ opacity: 1 }}
       className="fixed inset-0"
     >
-      {/* Victory Overlay */}
       {isVictory && (
         <div className="absolute z-50 inset-0 bg-black bg-opacity-70 flex flex-col items-center justify-center">
           <h2 className="text-3xl font-bold text-yellow-400 mb-4">
@@ -527,64 +498,41 @@ const GameScreen2 = ({ username, score, onExit }) => {
         </div>
       )}
 
-      {/* Map Container */}
       <MapContainer 
-       center={mapCenter || userLocation} zoom={13}
-        scrollWheelZoom={true}  // Enable scroll wheel zooming
-        zoomControl={true}      // Show zoom controls
+        center={mapCenter || userLocation} 
+        zoom={15}
+        scrollWheelZoom={true}
+        zoomControl={true}
         className="h-full w-full"
       >
-
         <ResizeMap />
-        {/* Fantasy-themed map tiles */}
         <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      />
-        {/* Map Tracker for interactions */}
-        <MapTracker 
-          userLocation={userLocation}
-          onMapMove={handleMapMove}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-
-        {/* User Marker */}
-        {userLocation && (
-          <Marker 
-            position={userLocation} 
-            icon={UserMarkerIcon}
-          >
-            <Popup>Your Current Location</Popup>
-          </Marker>
-        )}
-
-        {/* Treasure Marker */}
-        {treasureLocation && (
-          <Marker 
-            position={treasureLocation} 
-            icon={TreasureMarkerIcon}
-          >
-            <Popup>Treasure Awaits!</Popup>
-          </Marker>
-        )}
+        <Marker position={userLocation} icon={UserMarkerIcon}>
+          <Popup>Your Current Location</Popup>
+        </Marker>
+        <Marker position={treasureLocation} icon={TreasureMarkerIcon}>
+          <Popup>Treasure Awaits!</Popup>
+        </Marker>
       </MapContainer>
 
-      {/* Distance Indicator */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/70 rounded-lg px-4 py-2">
-        <p className="text-xl font-bold text-purple-800">
+      <div className="relative bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/70 rounded-lg px-6 py-3 flex items-center justify-between gap-4 w-[90%]">
+        <p className="text-lg font-bold text-purple-800 flex-grow text-center">
           {distance ? `${Math.round(distance)}m to Treasure` : 'Locating...'}
         </p>
+        <button 
+          onClick={onExit}
+          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex-shrink-0"
+        >
+          Exit
+        </button>
       </div>
-
-      {/* Exit Button */}
-      <button 
-        onClick={onExit}
-        className="absolute top-4 right-4 z-10 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-      >
-        Exit
-      </button>
     </motion.div>
   );
 };
+
 
 // Main App Component
 const TreasureHuntApp = () => {
