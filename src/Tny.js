@@ -421,7 +421,7 @@ const GameScreen2 = ({ username, score, onExit }) => {
           const generatedTreasureLocation = generateRandomPoint(
             currentLocation.lat, 
             currentLocation.lng, 
-            50
+            50 // 300 meters radius
           );
           setTreasureLocation(generatedTreasureLocation);
 
@@ -497,28 +497,32 @@ const GameScreen2 = ({ username, score, onExit }) => {
           </button>
         </div>
       )}
-
-      <MapContainer 
-        center={mapCenter || userLocation} 
-        zoom={15}
-        scrollWheelZoom={true}
-        zoomControl={true}
-        className="h-full w-full"
-      >
-        <ResizeMap />
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        <Marker position={userLocation} icon={UserMarkerIcon}>
-          <Popup>Your Current Location</Popup>
-        </Marker>
-        <Marker position={treasureLocation} icon={TreasureMarkerIcon}>
-          <Popup>Treasure Awaits!</Popup>
-        </Marker>
-      </MapContainer>
-
-      <div className="relative bottom-4 left-1/2 transform -translate-x-1/2 z-10 bg-white/70 rounded-lg px-6 py-3 flex items-center justify-between gap-4 w-[90%]">
+  
+      {/* Map container with adjusted height */}
+      <div className="absolute inset-0 bottom-[100px]">
+        <MapContainer 
+          center={mapCenter || userLocation} 
+          zoom={15}
+          scrollWheelZoom={true}
+          zoomControl={true}
+          className="h-full w-full"
+        >
+          <ResizeMap />
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          <Marker position={userLocation} icon={UserMarkerIcon}>
+            <Popup>Your Current Location</Popup>
+          </Marker>
+          <Marker position={treasureLocation} icon={TreasureMarkerIcon}>
+            <Popup>Treasure Awaits!</Popup>
+          </Marker>
+        </MapContainer>
+      </div>
+  
+      {/* Bottom bar */}
+      <div className="absolute bottom-0 left-0 w-full bg-white/70 px-6 py-3 flex items-center justify-between gap-4 h-[100px]">
         <p className="text-lg font-bold text-purple-800 flex-grow text-center">
           {distance ? `${Math.round(distance)}m to Treasure` : 'Locating...'}
         </p>
@@ -531,6 +535,7 @@ const GameScreen2 = ({ username, score, onExit }) => {
       </div>
     </motion.div>
   );
+  
 };
 
 
