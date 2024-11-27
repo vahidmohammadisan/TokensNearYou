@@ -9,8 +9,7 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { saveScore, fetchScore } from './utils';////score
 import 'leaflet/dist/leaflet.css';
-import { Compass, Trophy, MapPin, XCircle,Send } from 'lucide-react';
-
+import { Compass, Trophy, MapPin, XCircle, Send } from 'lucide-react';
 
 // Splash Screen Component
 const SplashScreen = ({ onComplete }) => {
@@ -404,8 +403,63 @@ const GameScreen2 = ({ username, score, onExit }) => {
   }, []);
 
   useEffect(() => {
-    // Previous setup logic remains the same
-    // ...
+    const setupInitialLocation = () => {
+      if (!navigator.geolocation) {
+        setLocationError('Geolocation is not supported by your browser');
+        return;
+      }
+  
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const currentLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          setUserLocation(currentLocation);
+          setMapCenter(currentLocation);
+  
+          const generatedTreasureLocation = generateRandomPoint(
+            currentLocation.lat, 
+            currentLocation.lng, 
+            50 // 300 meters radius
+          );
+          setTreasureLocation(generatedTreasureLocation);
+  
+          const id = navigator.geolocation.watchPosition(
+            (newPosition) => {
+              const newLocation = {
+                lat: newPosition.coords.latitude,
+                lng: newPosition.coords.longitude
+              };
+              setUserLocation(newLocation); // Update user location
+              setMapCenter(newLocation); // Automatically recenter map
+  
+              calculateCurrentDistance(newLocation, generatedTreasureLocation);
+            },
+            (err) => {
+              setLocationError(err.message);
+            },
+            {
+              enableHighAccuracy: true,
+              maximumAge: 0,
+              timeout: 5000
+            }
+          );
+          setWatchId(id);
+        },
+        (err) => {
+          setLocationError(err.message);
+        }
+      );
+    };
+  
+    setupInitialLocation();
+  
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
   }, [calculateCurrentDistance]);
 
   if (locationError) {
